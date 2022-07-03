@@ -287,13 +287,13 @@ public:
         auto & builder = parser.as<ConfigurationParser>();
         auto conf = state.as<EffectState>().result();
         auto it_name = std::find_if(conf.cbegin(), conf.cend(),
-                                    [](auto & item) { return item.first == "effect" ||
+                                    [](const auto & item) { return item.first == "effect" ||
                                                              item.first == "plugin"; });
         if (it_name == conf.end() || !std::holds_alternative<std::string>(it_name->second)) {
             throw builder.makeError("plugin configuration must have a name");
         }
 
-        const auto name = std::move(std::get<std::string>(it_name->second));
+        const auto name = std::get<std::string>(it_name->second);
         conf.erase(it_name);
 
         m_value.push_back({std::move(name), std::move(conf)});
@@ -668,7 +668,7 @@ Configuration Configuration::loadFile(const std::string & path)
 std::string getDeviceName(const Configuration & config, const std::string & serial)
 {
     auto dit = std::find_if(config.devices.begin(), config.devices.end(),
-                            [&serial](auto & item) { return item.second == serial; });
+                            [&serial](const auto & item) { return item.second == serial; });
     return dit != config.devices.end() ? dit->first : serial;
 }
 
