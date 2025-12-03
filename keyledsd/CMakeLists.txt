@@ -69,6 +69,7 @@ set(service_SRCS
     src/service/StaticModuleRegistry.cxx
     src/tools/DeviceWatcher.cxx
     src/tools/Event.cxx
+    src/tools/EvdevWatcher.cxx
     src/tools/FileWatcher.cxx
     src/tools/XContextWatcher.cxx
     src/tools/XInputWatcher.cxx
@@ -109,6 +110,7 @@ ENDIF(NOT LIBUDEV)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBUV REQUIRED libuv)
+pkg_check_modules(LIBEVDEV REQUIRED libevdev)
 
 IF(NOT NO_DBUS)
     pkg_check_modules(LIBSYSTEMD REQUIRED libsystemd)
@@ -152,8 +154,8 @@ target_link_libraries(core common
 add_executable(keyledsd ${service_SRCS})
 target_compile_definitions(keyledsd PRIVATE KEYLEDSD_INTERNAL)
 target_compile_definitions(keyledsd PRIVATE KEYLEDSD_MODULES_STATIC=1 $<$<BOOL:${NO_DBUS}>:NO_DBUS>)
-target_include_directories(keyledsd PRIVATE include ${LIBUV_INCLUDE_DIRS})
-target_link_libraries(keyledsd common core libkeyleds ${LIBUDEV} ${LIBUV_LIBRARIES})
+target_include_directories(keyledsd PRIVATE include ${LIBUV_INCLUDE_DIRS} ${LIBEVDEV_INCLUDE_DIRS})
+target_link_libraries(keyledsd common core libkeyleds ${LIBUDEV} ${LIBUV_LIBRARIES} ${LIBEVDEV_LIBRARIES})
 IF(NOT NO_DBUS)
     target_include_directories(keyledsd SYSTEM PRIVATE ${LIBSYSTEMD_INCLUDE_DIRS})
     target_link_libraries(keyledsd ${LIBSYSTEMD_LIBRARIES})
