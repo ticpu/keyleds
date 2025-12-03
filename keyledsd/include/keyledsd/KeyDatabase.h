@@ -120,9 +120,15 @@ public:
     using size_type = unsigned int;
     using difference_type = signed int;
 
-    class iterator : public std::iterator<std::bidirectional_iterator_tag,
-                                          const KeyDatabase::Key>
+    class iterator
     {
+    public:
+        using iterator_category = std::bidirectional_iterator_tag;
+        using value_type = const KeyDatabase::Key;
+        using difference_type = std::ptrdiff_t;
+        using pointer = value_type *;
+        using reference = value_type &;
+    private:
         key_list::const_iterator m_it;
     public:
                     iterator() = default;
