@@ -25,6 +25,7 @@
 #include "keyledsd/service/Configuration.h"
 #include "keyledsd/tools/DeviceWatcher.h"
 #include "keyledsd/tools/Event.h"
+#include "keyledsd/tools/EvdevWatcher.h"
 #include "keyledsd/tools/FileWatcher.h"
 #include <memory>
 #include <string>
@@ -99,6 +100,7 @@ private:
     display_list        m_displays;         ///< Connections to X displays
 
     DeviceWatcher       m_deviceWatcher;    ///< Connection to libudev
+    tools::EvdevWatcher m_evdevWatcher;     ///< Direct evdev input watcher
     FileWatcher::subscription m_fileWatcherSub; ///< Notifications for conf change
 };
 

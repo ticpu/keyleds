@@ -82,11 +82,13 @@ Service::Service(EffectManager & effectManager, tools::FileWatcher & fileWatcher
       m_fileWatcher(fileWatcher),
       m_configuration(std::move(configuration)),
       m_loop(loop),
-      m_deviceWatcher(loop)
+      m_deviceWatcher(loop),
+      m_evdevWatcher(loop)
 {
     using namespace std::placeholders;
     connect(m_deviceWatcher.deviceAdded, this, std::bind(&Service::onDeviceAdded, this, _1));
     connect(m_deviceWatcher.deviceRemoved, this, std::bind(&Service::onDeviceRemoved, this, _1));
+    connect(m_evdevWatcher.keyEventReceived, this, std::bind(&Service::handleKeyEvent, this, _1, _2, _3));
     m_fileWatcherSub = m_fileWatcher.subscribe(
         m_configuration.path, FileWatcher::Event::CloseWrite,
         std::bind(&Service::onConfigurationFileChanged, this, _1)
@@ -215,6 +217,11 @@ void Service::onDeviceAdded(const tools::device::Description & description)
                ", <", manager->device().name(), ">");
 
         manager->setPaused(false);
+
+        for (const auto & evDev : manager->eventDevices()) {
+            m_evdevWatcher.addDevice(evDev);
+        }
+
         m_devices.emplace_back(std::move(manager));
 
     } catch (device::Device::error & error) {
@@ -236,6 +243,10 @@ void Service::onDeviceRemoved(const tools::device::Description & description)
         auto manager = std::move(*it);
         if (it != m_devices.end() - 1) { *it = std::move(m_devices.back()); }
         m_devices.pop_back();
+
+        for (const auto & evDev : manager->eventDevices()) {
+            m_evdevWatcher.removeDevice(evDev);
+        }
 
         NOTICE("removing device ", manager->serial());
 
