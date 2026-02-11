@@ -183,6 +183,8 @@ std::string xlib::Window::iconName() const
 
 std::string xlib::Window::getProperty(Atom atom, Atom type) const
 {
+    if (atom == None) { return std::string(); }
+
     Atom actualType;
     int actualFormat;
     unsigned long nItems, bytesAfter;
@@ -271,6 +273,8 @@ void Device::setEventMask(const std::vector<int> & events)
 
 std::string Device::getProperty(Atom atom, Atom type) const
 {
+    if (atom == None) { return std::string(); }
+
     Atom actualType;
     int actualFormat;
     unsigned long nItems, bytesAfter;
