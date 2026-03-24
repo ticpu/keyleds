@@ -2,10 +2,10 @@
 #   => Give access to control interface to console user
 #   => Do not to give control over other interfaces
 
-ACTION=="add", KERNEL=="hidraw*", ATTRS{idVendor}=="046d", GOTO="logitech"
+ACTION=="add|change", KERNEL=="hidraw*", ATTRS{idVendor}=="046d", GOTO="logitech"
 GOTO="end"
 
 LABEL="logitech"
-ATTRS{bInterfaceProtocol}=="00", TAG+="uaccess"
+ATTRS{bInterfaceProtocol}=="00", GROUP="input", MODE="0660", TAG+="uaccess"
 
 LABEL="end"
