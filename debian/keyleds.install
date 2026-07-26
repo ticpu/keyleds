@@ -1,6 +1,7 @@
 usr/bin
 usr/lib/*/*.so.*
 usr/lib/*/keyledsd/*
+usr/lib/systemd/user
+usr/lib/udev/rules.d
 usr/share/keyledsd
 keyledsd/org.etherdream.keyledsd.metainfo.xml usr/share/metainfo
-logitech.rules  usr/share/keyledsd

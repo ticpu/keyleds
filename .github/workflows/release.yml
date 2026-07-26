@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0    # the annotated tag object carries the release notes
+
+      - name: Check the tag matches the declared version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          DECLARED="$(grep -Po 'keyleds VERSION \K[0-9.]+' CMakeLists.txt)"
+          if [ "$TAG" != "$DECLARED" ]; then
+            echo "tag v$TAG does not match CMakeLists.txt version $DECLARED" >&2
+            exit 1
+          fi
+
+      - name: Create tarball
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          git archive --format=tar --prefix="keyleds-${VERSION}/" HEAD \
+            | xz -c > "keyleds-${VERSION}.tar.xz"
+
+      - name: Build and install-test the Debian package
+        run: packaging/build-deb.sh
+
+      - name: Build and install-test the RPM package
+        run: packaging/build-rpm.sh
+
+      # The tag message is the CHANGELOG section; publish it rather than letting
+      # GitHub synthesise a commit list
+      - name: Take the release notes from the tag
+        run: |
+          # subject+body rather than contents: the latter appends the signature
+          git tag -l --format='%(contents:subject)%0a%0a%(contents:body)' \
+            "${GITHUB_REF#refs/tags/}" > release-notes.md
+          cat release-notes.md
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release-notes.md
+          files: |
+            keyleds-*.tar.xz
+            dist/*.deb
+            dist/*.rpm
+          draft: false
+          prerelease: false
+          generate_release_notes: false

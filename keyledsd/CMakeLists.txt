@@ -15,7 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 cmake_minimum_required (VERSION 3.10)
-project(keyledsd VERSION 1.1.1 LANGUAGES C CXX)
+# Inherits the product version; the top level CMakeLists.txt is the only source
+project(keyledsd VERSION ${keyleds_VERSION} LANGUAGES C CXX)
 
 ##############################################################################
 # Options

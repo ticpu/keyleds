@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      # Taken from debian/control so this job cannot drift from the packaging;
+      # gtest is extra because the package does not build the test suite
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends devscripts equivs
+          sudo mk-build-deps --install --remove \
+            --tool 'apt-get -y --no-install-recommends' debian/control
+          sudo apt-get install -y --no-install-recommends libgtest-dev
+        env:
+          DEBIAN_FRONTEND: noninteractive
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DWITH_TESTS=ON
+
+      - name: Build
+        run: cmake --build build -j"$(nproc)"
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  deb:
+    name: Debian package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      # Same script as `make deb`: builds the package, then installs it on a
+      # clean system and fails if anything is missing or unresolved
+      - name: Build and install-test the package
+        run: packaging/build-deb.sh
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: debian-packages
+          path: dist/*.deb
+
+  rpm:
+    name: RPM package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      # Same script as `make rpm`: builds the package, then installs it on a
+      # clean system and fails if anything is missing or unresolved
+      - name: Build and install-test the package
+        run: packaging/build-rpm.sh
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpm-packages
+          path: dist/*.rpm

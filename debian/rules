@@ -14,10 +14,8 @@ LUA_ARCHS = amd64 arm64 armhf x86
 override_dh_auto_configure:
 	dh_auto_configure -- -DWITH_LUA=$(if $(filter $(DEB_TARGET_ARCH),$(LUA_ARCHS)),1,0)
 
+# The udev rule and the systemd user unit are installed by the build itself.
+# The autostart entry is gone: it raced with the unit for the session bus name.
 override_dh_install:
 	dh_install
 	install -m 644 -D keyledsd/keyledsd.conf.sample debian/keyleds/etc/keyledsd.conf
-	install -d debian/keyleds/etc/xdg/autostart
-	ln -s /usr/share/keyledsd/keyledsd.desktop debian/keyleds/etc/xdg/autostart/
-	install -d debian/keyleds/lib/udev/rules.d
-	cp debian/keyleds/usr/share/keyledsd/logitech.rules debian/keyleds/lib/udev/rules.d/70-logitech-hidpp.rules

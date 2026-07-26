@@ -1,0 +1,46 @@
+# Builds the Debian package, then proves it installs on a clean system.
+# Both stages must succeed for `make deb` to produce anything.
+ARG SUITE=trixie
+
+FROM docker.io/debian:${SUITE} AS builder
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential devscripts equivs fakeroot lintian \
+    && rm -rf /var/lib/apt/lists/*
+
+# Build dependencies come from debian/control so the two cannot drift apart
+COPY debian/control /tmp/pkg/debian/control
+RUN apt-get update \
+    && mk-build-deps --install --remove \
+        --tool 'apt-get -y --no-install-recommends' /tmp/pkg/debian/control \
+    && rm -f keyleds-build-deps_*.deb \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+COPY . .
+RUN dpkg-buildpackage -us -uc -b
+RUN mkdir /debs && cp /*.deb /debs/
+
+
+FROM docker.io/debian:${SUITE} AS install-test
+ENV DEBIAN_FRONTEND=noninteractive
+COPY --from=builder /debs /debs
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends /debs/*.deb \
+    && rm -rf /var/lib/apt/lists/*
+
+# Every shipped ELF must resolve, which is what proves the dependencies are right
+RUN set -eu; \
+    for f in /usr/bin/keyledsd /usr/bin/keyledsctl \
+             /usr/lib/*/keyledsd/*.so /usr/lib/*/libkeyleds.so.* ; do \
+        echo "checking $f"; \
+        if ldd "$f" | grep -q 'not found'; then ldd "$f"; exit 1; fi; \
+    done
+
+RUN set -eu; \
+    test -f /usr/lib/systemd/user/keyledsd.service; \
+    test -f /usr/lib/udev/rules.d/70-logitech-hidpp.rules; \
+    test -f /etc/keyledsd.conf; \
+    test -f /usr/share/keyledsd/layouts/c33c00000000_0001.yaml; \
+    ! test -e /etc/xdg/autostart/keyledsd.desktop

@@ -75,3 +75,20 @@ ELSE()
 ENDIF()
 install(FILES logitech.rules DESTINATION ${UDEV_RULES_DIR}
         RENAME 70-logitech-hidpp.rules)
+
+##############################################################################
+# Packaging
+
+# Builds and install-tests the Debian package in a container. Needs only podman,
+# so it does not depend on anything this build itself configured.
+add_custom_target(deb
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/packaging/build-deb.sh
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMENT "Building Debian package in a container"
+    USES_TERMINAL)
+
+add_custom_target(rpm
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/packaging/build-rpm.sh
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMENT "Building RPM package in a container"
+    USES_TERMINAL)

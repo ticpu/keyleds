@@ -1,0 +1,43 @@
+# Builds the RPM package, then proves it installs on a clean system.
+# Both stages must succeed for `make rpm` to produce anything.
+ARG RELEASE=41
+
+FROM docker.io/fedora:${RELEASE} AS builder
+RUN dnf install -y rpm-build rpmdevtools dnf-plugins-core && dnf clean all
+
+WORKDIR /src
+COPY . .
+
+# Build dependencies come from the spec so the two cannot drift apart
+RUN dnf builddep -y keyleds.spec && dnf clean all
+
+# %setup expects a tarball whose top directory is name-version
+RUN set -eu; \
+    version="$(grep -Po '^Version:\s*\K\S+' keyleds.spec)"; \
+    rpmdev-setuptree; \
+    tar --exclude=./build --exclude=./dist --exclude=./.git \
+        --transform "s,^\.,keyleds-${version}," \
+        -czf ~/rpmbuild/SOURCES/keyleds-${version}.tar.gz .; \
+    rpmbuild -bb keyleds.spec
+
+RUN mkdir /rpms && find ~/rpmbuild/RPMS -name '*.rpm' -exec cp {} /rpms/ \;
+
+
+FROM docker.io/fedora:${RELEASE} AS install-test
+COPY --from=builder /rpms /rpms
+RUN dnf install -y /rpms/*.rpm && dnf clean all
+
+# Every shipped ELF must resolve, which is what proves the dependencies are right
+RUN set -eu; \
+    for f in /usr/bin/keyledsd /usr/bin/keyledsctl \
+             /usr/lib64/keyledsd/*.so /usr/lib64/libkeyleds.so.* ; do \
+        echo "checking $f"; \
+        if ldd "$f" | grep -q 'not found'; then ldd "$f"; exit 1; fi; \
+    done
+
+RUN set -eu; \
+    test -f /usr/lib/systemd/user/keyledsd.service; \
+    test -f /usr/lib/udev/rules.d/70-logitech-hidpp.rules; \
+    test -f /etc/keyledsd.conf; \
+    test -f /usr/share/keyledsd/layouts/c33c00000000_0001.yaml; \
+    ! test -e /etc/xdg/autostart/keyledsd.desktop
