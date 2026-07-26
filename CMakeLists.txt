@@ -62,3 +62,16 @@ ENDIF()
 IF (WITH_PYTHON)
     add_subdirectory(python)
 ENDIF()
+
+##############################################################################
+# Data files
+
+find_package(PkgConfig REQUIRED)
+pkg_get_variable(UDEV_RULES_DIR udev udev_dir)
+IF(UDEV_RULES_DIR)
+    set(UDEV_RULES_DIR ${UDEV_RULES_DIR}/rules.d)
+ELSE()
+    set(UDEV_RULES_DIR ${CMAKE_INSTALL_PREFIX}/lib/udev/rules.d)
+ENDIF()
+install(FILES logitech.rules DESTINATION ${UDEV_RULES_DIR}
+        RENAME 70-logitech-hidpp.rules)

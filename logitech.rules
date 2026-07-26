@@ -1,11 +1,16 @@
-# udev rules for Logitech devices' hidraw
-#   => Give access to control interface to console user
+# udev rules for Logitech devices
+#   => Give access to control interface and key input to the console user
 #   => Do not to give control over other interfaces
+
+# keyledsd reads key presses straight from the keyboard's event nodes; stock
+# udev only grants those to joysticks, so tag them for the active seat here
+ACTION=="add|change", SUBSYSTEM=="input", ATTRS{idVendor}=="046d", \
+    ENV{ID_INPUT_KEY}=="1", TAG+="uaccess"
 
 ACTION=="add|change", KERNEL=="hidraw*", ATTRS{idVendor}=="046d", GOTO="logitech"
 GOTO="end"
 
 LABEL="logitech"
-ATTRS{bInterfaceProtocol}=="00", GROUP="input", MODE="0660", TAG+="uaccess"
+ATTRS{bInterfaceProtocol}=="00", TAG+="uaccess"
 
 LABEL="end"
