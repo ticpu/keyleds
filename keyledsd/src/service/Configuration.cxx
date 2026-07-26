@@ -293,7 +293,7 @@ public:
             throw builder.makeError("plugin configuration must have a name");
         }
 
-        const auto name = std::get<std::string>(it_name->second);
+        auto name = std::get<std::string>(it_name->second);
         conf.erase(it_name);
 
         m_value.push_back({std::move(name), std::move(conf)});

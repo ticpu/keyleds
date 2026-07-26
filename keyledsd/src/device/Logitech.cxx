@@ -205,9 +205,9 @@ std::string Logitech::getName(struct keyleds_device * device)
     if (!keyleds_get_device_name(device, KEYLEDS_TARGET_DEFAULT, &name)) {
         throw error(keyleds_get_error_str(), keyleds_get_errno());
     }
-    // Wrap the pointer in a smart pointer in case string creation throws
+    // Owns the buffer: frees it whether or not string creation throws
     auto name_p = keyleds_ptr<char[], keyleds_device_name_deleter>(name);
-    return std::string(name);
+    return std::string(name_p.get());
 }
 
 Logitech::block_list Logitech::getBlocks(struct keyleds_device * device)
