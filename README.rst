@@ -1,10 +1,16 @@
-=======================
-|logo| keyleds |codacy|
-=======================
+===============
+|logo| keyleds
+===============
 
 Advanced RGB animation service for Logitech keyboards.
 
 |animation|
+
+.. note::
+   Maintained fork of `spectras/keyleds`_, which has seen no activity since 2021.
+   Adds Wayland support and build fixes for current toolchains. Bug reports are
+   welcome on this repository's tracker; the upstream wiki is still the reference
+   for configuration.
 
 Quick links:
 
@@ -20,8 +26,11 @@ Features
 --------
 
 * Flexible per-application RGB settings with `key groups`_.
+* Runs on X11 and Wayland: key events are read straight from the keyboard's
+  event devices, so effects react no matter which window has focus.
 * Reacts to window title changes, enabling switching profiles based on
-  current webpage in browser or open file extension in editors.
+  current webpage in browser or open file extension in editors. This needs an
+  X display, so under Wayland it only follows XWayland clients.
 * Improved, fully configurable animation plugins:
 
   - **Keypress feedback** effect.
@@ -47,19 +56,18 @@ And a few goodies:
 
 Feedback, feature ideas, pull requests are welcome!
 
-.. _installing: https://github.com/spectras/keyleds/wiki/Installing
-.. _documentation: https://github.com/spectras/keyleds/wiki
-.. _sample configuration: https://github.com/spectras/keyleds/blob/master/keyledsd/keyledsd.conf.sample
-.. _issue tracker: https://github.com/spectras/keyleds/issues
-.. _key groups: https://github.com/spectras/keyleds/wiki/Key-Group
-.. _LUA engine: https://github.com/spectras/keyleds/wiki/LUA-Introduction
+.. _spectras/keyleds: https://github.com/keyleds/keyleds
+.. _installing: https://github.com/keyleds/keyleds/wiki/Installing
+.. _documentation: https://github.com/keyleds/keyleds/wiki
+.. _sample configuration: https://github.com/ticpu/keyleds/blob/main/keyledsd/keyledsd.conf.sample
+.. _issue tracker: https://github.com/ticpu/keyleds/issues
+.. _key groups: https://github.com/keyleds/keyleds/wiki/Key-Group
+.. _LUA engine: https://github.com/keyleds/keyleds/wiki/LUA-Introduction
 .. |logo| image:: logo.svg
    :width: 64px
    :height: 80px
    :align: middle
    :alt:
-.. |codacy| image:: https://api.codacy.com/project/badge/Grade/c0737da40c404e9d9b675197a3567048
-   :target: https://www.codacy.com/project/spectras/keyleds/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=spectras/keyleds&amp;utm_campaign=Badge_Grade_Dashboard
 .. |animation| image:: animation.gif
    :width: 320px
    :height: 128px
