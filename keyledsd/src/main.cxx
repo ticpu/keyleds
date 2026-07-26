@@ -215,13 +215,15 @@ int main(int argc, char * argv[])
 
 #ifndef NO_DBUS
     sd_bus * bus = nullptr;
-    if (int err = sd_bus_open_user(&bus); err < 0) {
-        CRITICAL("Could not connect to session bus: ", strerror(-err));
-        return 2;
-    }
-    if (int err = sd_bus_request_name(bus, "org.etherdream.KeyledsService", 0); err < 0) {
-        CRITICAL("Could not reserve name on session bus: ", strerror(-err));
-        return 2;
+    if (!options->noDBus) {
+        if (int err = sd_bus_open_user(&bus); err < 0) {
+            CRITICAL("Could not connect to session bus: ", strerror(-err));
+            return 2;
+        }
+        if (int err = sd_bus_request_name(bus, "org.etherdream.KeyledsService", 0); err < 0) {
+            CRITICAL("Could not reserve name on session bus: ", strerror(-err));
+            return 2;
+        }
     }
 #endif
 
@@ -250,12 +252,16 @@ int main(int argc, char * argv[])
         }
 
 #ifndef NO_DBUS
-        auto serviceAdapter = service::dbus::ServiceAdapter(bus, service);
-        auto dbusFdWatcher = tools::FDWatcher(
-            sd_bus_get_fd(bus), tools::FDWatcher::Read,
-            [&](auto){ while (sd_bus_process(bus, nullptr) > 0) { /* empty */ } },
-            main_loop
-        );
+        auto serviceAdapter = std::optional<service::dbus::ServiceAdapter>();
+        auto dbusFdWatcher = std::optional<tools::FDWatcher>();
+        if (bus != nullptr) {
+            serviceAdapter.emplace(bus, service);
+            dbusFdWatcher.emplace(
+                sd_bus_get_fd(bus), tools::FDWatcher::Read,
+                [&](auto){ while (sd_bus_process(bus, nullptr) > 0) { /* empty */ } },
+                main_loop
+            );
+        }
 #endif
 
         // Register signals and go
@@ -275,9 +281,11 @@ int main(int argc, char * argv[])
     uv_loop_close(&main_loop);
 
 #ifndef NO_DBUS
-    sd_bus_flush(bus);
-    sd_bus_close(bus);
-    sd_bus_unref(bus);
+    if (bus != nullptr) {
+        sd_bus_flush(bus);
+        sd_bus_close(bus);
+        sd_bus_unref(bus);
+    }
 #endif
 
     return 0;
