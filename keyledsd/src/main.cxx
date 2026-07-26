@@ -185,7 +185,7 @@ int main(int argc, char * argv[])
     auto configuration = Configuration();
     try {
         configuration = Configuration::loadFile(options->configPath);
-        INFO("using ", configuration.path);
+        NOTICE("using configuration ", configuration.path);
     } catch (std::exception & error) {
         CRITICAL("Could not load configuration: ", error.what());
         return 1;
