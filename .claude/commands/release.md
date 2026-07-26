@@ -13,5 +13,5 @@ If $ARGUMENTS names a version or bump level (patch/minor/major), use it; otherwi
 7. Commit as `release: vX.Y.Z`, staging `CMakeLists.txt`, `keyleds.spec`, `debian/changelog` and `CHANGELOG.rst` explicitly.
 8. `git push`, then WAIT for CI to pass on main (`gh run watch`).
 9. `git tag -as vX.Y.Z -m "$(packaging/changelog-section.sh X.Y.Z)"` — the tag message is the `CHANGELOG.rst` section, and the release workflow publishes it as the release body. Never retype it.
-10. `git push --tags`, then WAIT for the Release workflow to finish (`gh run watch`). It refuses to publish if the tag and `CMakeLists.txt` disagree.
+10. `git push origin vX.Y.Z` — that tag only, never `--tags`, which would also push any unrelated local tag. Then WAIT for the Release workflow to finish (`gh run watch`). It refuses to publish if the tag and `CMakeLists.txt` disagree.
 11. Update the AUR package. AUR commits get no Co-Authored-By trailer.

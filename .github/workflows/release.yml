@@ -19,8 +19,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-        with:
-          fetch-depth: 0    # the annotated tag object carries the release notes
 
       - name: Check the tag matches the declared version
         run: |
@@ -43,13 +41,12 @@ jobs:
       - name: Build and install-test the RPM package
         run: packaging/build-rpm.sh
 
-      # The tag message is the CHANGELOG section; publish it rather than letting
-      # GitHub synthesise a commit list
-      - name: Take the release notes from the tag
+      # Read the section straight out of the checkout. The tag message holds the
+      # same text, but actions/checkout resolves the ref to the commit, so
+      # reading the annotation there yields the commit message instead.
+      - name: Take the release notes from the changelog
         run: |
-          # subject+body rather than contents: the latter appends the signature
-          git tag -l --format='%(contents:subject)%0a%0a%(contents:body)' \
-            "${GITHUB_REF#refs/tags/}" > release-notes.md
+          packaging/changelog-section.sh "${GITHUB_REF#refs/tags/v}" > release-notes.md
           cat release-notes.md
 
       - name: Create release
