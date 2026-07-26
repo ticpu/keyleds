@@ -1,3 +1,9 @@
+keyleds (1.2.0-1) unstable; urgency=medium
+
+  * New upstream release; see CHANGELOG.rst.
+
+ -- Jérôme Poulin <jeromepoulin@gmail.com>  Sun, 26 Jul 2026 18:12:24 -0400
+
 keyleds (1.1.1-1) unstable; urgency=medium
 
   * Updated upstream to v1.1.1.

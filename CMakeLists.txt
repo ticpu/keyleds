@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 cmake_minimum_required (VERSION 3.10)
-project (keyleds VERSION 1.1.1 LANGUAGES C CXX)
+project (keyleds VERSION 1.2.0 LANGUAGES C CXX)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMakeModules" ${CMAKE_MODULE_PATH})
 
