@@ -82,11 +82,14 @@ Service::Service(EffectManager & effectManager, tools::FileWatcher & fileWatcher
       m_fileWatcher(fileWatcher),
       m_configuration(std::move(configuration)),
       m_loop(loop),
-      m_deviceWatcher(loop)
+      m_deviceWatcher(loop),
+      m_evdevWatcher(loop)
 {
     using namespace std::placeholders;
     connect(m_deviceWatcher.deviceAdded, this, std::bind(&Service::onDeviceAdded, this, _1));
     connect(m_deviceWatcher.deviceRemoved, this, std::bind(&Service::onDeviceRemoved, this, _1));
+    connect(m_evdevWatcher.keyEventReceived, this,
+            std::bind(&Service::handleKeyEvent, this, _1, _2, _3, KeySource::Evdev));
     m_fileWatcherSub = m_fileWatcher.subscribe(
         m_configuration.path, FileWatcher::Event::CloseWrite,
         std::bind(&Service::onConfigurationFileChanged, this, _1)
@@ -106,7 +109,7 @@ void Service::addDisplay(std::unique_ptr<tools::xlib::Display> display)
     connect(displayManager->contextChanged, this,
             std::bind(&Service::setContext, this, _1));
     connect(displayManager->keyEventReceived, this,
-            std::bind(&Service::handleKeyEvent, this, _1, _2, _3));
+            std::bind(&Service::handleKeyEvent, this, _1, _2, _3, KeySource::XInput));
 
     displayManager->scanDevices();
     setContext(displayManager->currentContext());
@@ -152,8 +155,11 @@ void Service::handleGenericEvent(const string_map & context)
     for (auto & device : m_devices) { device->handleGenericEvent(context); }
 }
 
-void Service::handleKeyEvent(const std::string & devNode, int key, bool press)
+void Service::handleKeyEvent(const std::string & devNode, int key, bool press, KeySource source)
 {
+    // Both watchers see the same node while an X client has focus
+    if (source == KeySource::XInput && m_evdevWatcher.isWatching(devNode)) { return; }
+
     for (auto & device : m_devices) {
         const auto & evDevs = device->eventDevices();
         if (std::find(evDevs.begin(), evDevs.end(), devNode) != evDevs.end()) {
@@ -215,6 +221,11 @@ void Service::onDeviceAdded(const tools::device::Description & description)
                ", <", manager->device().name(), ">");
 
         manager->setPaused(false);
+
+        for (const auto & evDev : manager->eventDevices()) {
+            m_evdevWatcher.addDevice(evDev);
+        }
+
         m_devices.emplace_back(std::move(manager));
 
     } catch (device::Device::error & error) {
@@ -236,6 +247,10 @@ void Service::onDeviceRemoved(const tools::device::Description & description)
         auto manager = std::move(*it);
         if (it != m_devices.end() - 1) { *it = std::move(m_devices.back()); }
         m_devices.pop_back();
+
+        for (const auto & evDev : manager->eventDevices()) {
+            m_evdevWatcher.removeDevice(evDev);
+        }
 
         NOTICE("removing device ", manager->serial());
 

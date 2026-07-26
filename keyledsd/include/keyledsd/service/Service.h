@@ -25,6 +25,7 @@
 #include "keyledsd/service/Configuration.h"
 #include "keyledsd/tools/DeviceWatcher.h"
 #include "keyledsd/tools/Event.h"
+#include "keyledsd/tools/EvdevWatcher.h"
 #include "keyledsd/tools/FileWatcher.h"
 #include <memory>
 #include <string>
@@ -55,6 +56,10 @@ class Service final
     using device_list = std::vector<std::unique_ptr<DeviceManager>>;
     using display_list = std::vector<std::unique_ptr<DisplayManager>>;
 public:
+    /// Where a key event came from. XInput only reports keys pressed while an X
+    /// client has focus, so evdev takes precedence for any device it watches.
+    enum class KeySource { XInput, Evdev };
+
                         Service(EffectManager &, FileWatcher &,
                                 Configuration, uv_loop_t & loop);
                         Service(const Service &) = delete;
@@ -73,7 +78,7 @@ public:
     void                setAutoQuit(bool);
     void                setContext(const string_map &);
     void                handleGenericEvent(const string_map &);
-    void                handleKeyEvent(const std::string &, int, bool);
+    void                handleKeyEvent(const std::string &, int, bool, KeySource);
     void                forceRefreshDevices();
 
     // signals
@@ -99,6 +104,7 @@ private:
     display_list        m_displays;         ///< Connections to X displays
 
     DeviceWatcher       m_deviceWatcher;    ///< Connection to libudev
+    tools::EvdevWatcher m_evdevWatcher;     ///< Direct evdev input watcher
     FileWatcher::subscription m_fileWatcherSub; ///< Notifications for conf change
 };
 
