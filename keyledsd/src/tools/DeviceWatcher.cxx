@@ -16,12 +16,16 @@
  */
 #include "keyledsd/tools/DeviceWatcher.h"
 
+#include "keyledsd/logging.h"
 #include <algorithm>
 #include <cassert>
+#include <cstring>
 #include <libudev.h>
 #include <stdexcept>
 #include <string>
 #include <uv.h>
+
+LOGGING("device-watcher");
 
 using keyleds::tools::device::Description;
 using keyleds::tools::device::DeviceWatcher;
@@ -249,31 +253,49 @@ void DeviceWatcher::setActive(bool active)
             throw Error("udev notification initialization failed");
         }
 
-        setupMonitor(*m_monitor);
-
-        udev_monitor_enable_receiving(m_monitor.get());
-        m_fdWatcher = std::make_unique<tools::FDWatcher>(
-            udev_monitor_get_fd(m_monitor.get()), tools::FDWatcher::Read,
-            std::bind(&DeviceWatcher::onMonitorReady, this),
-            m_loop
-        );
-
         uv_timer_start(m_scan.get(), [](uv_timer_t * handle) {
-            static_cast<DeviceWatcher *>(handle->data)->scan();
+            auto * watcher = static_cast<DeviceWatcher *>(handle->data);
+            if (!watcher->m_active) { return; }
+            watcher->startMonitor();
+            watcher->scan();
         }, 0, 0);
 
     } else {
+        uv_timer_stop(m_scan.get());
         m_fdWatcher = nullptr;
         m_monitor = nullptr;
     }
     m_active = active;
 }
 
+void DeviceWatcher::startMonitor()
+{
+    if (m_monitor == nullptr || m_fdWatcher != nullptr) { return; }
+
+    setupMonitor(*m_monitor);
+
+    if (int err = udev_monitor_enable_receiving(m_monitor.get()); err < 0) {
+        ERROR("udev notifications unavailable: ", std::strerror(-err),
+              " - device hotplug will not be detected");
+        m_monitor = nullptr;
+        return;
+    }
+    m_fdWatcher = std::make_unique<tools::FDWatcher>(
+        udev_monitor_get_fd(m_monitor.get()), tools::FDWatcher::Read,
+        std::bind(&DeviceWatcher::onMonitorReady, this),
+        m_loop
+    );
+}
+
 void DeviceWatcher::onMonitorReady()
 {
     auto device = udev_ptr<struct udev_device>(udev_monitor_receive_device(m_monitor.get()));
     if (device == nullptr) {
-        throw Error("failed to read notification details from udev");
+        // Also how libudev reports an event that failed the filter in userspace,
+        // which happens for every foreign uevent where the socket filter could
+        // not be attached. Throwing here would unwind through libuv.
+        DEBUG("no device in udev notification");
+        return;
     }
 
     const char * syspath = udev_device_get_syspath(device.get());
@@ -362,6 +384,9 @@ void FilteredDeviceWatcher::setupMonitor(struct udev_monitor & monitor) const
 bool FilteredDeviceWatcher::isVisible(const Description & dev) const
 {
     // Check attributes that either monitor or enumerate miss
+    if (!m_matchSubsystem.empty() && m_matchSubsystem != dev.subsystem()) {
+        return false;
+    }
     if (!m_matchDevType.empty() && m_matchDevType != dev.devType()) {
         return false;
     }

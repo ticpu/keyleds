@@ -311,7 +311,8 @@ bool Logitech::error::expected() const
     return (m_code == KEYLEDS_ERROR_ERRNO && m_oserror == ENODEV)
         || m_code == KEYLEDS_ERROR_TIMEDOUT
         || m_code == KEYLEDS_ERROR_HIDNOPP
-        || m_code == KEYLEDS_ERROR_HIDVERSION;
+        || m_code == KEYLEDS_ERROR_HIDVERSION
+        || m_code == KEYLEDS_ERROR_FEATURE_NOT_FOUND;
 }
 
 bool Logitech::error::recoverable() const

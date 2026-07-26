@@ -162,6 +162,9 @@ protected:
     virtual bool        isVisible(const Description & dev) const;
 
 private:
+    /// Applies the filters and starts listening. Deferred, so that it runs on a
+    /// fully constructed object: the filters live in virtual overrides.
+    void                startMonitor();
     /// Invoked whenever system notifications from udev become available
     void                onMonitorReady();
 
