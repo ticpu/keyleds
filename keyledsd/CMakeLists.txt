@@ -199,3 +199,13 @@ install(DIRECTORY layouts/
         FILES_MATCHING PATTERN "*.yaml")
 install(FILES keyledsd.conf.sample keyledsd.desktop
         DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME})
+
+# systemd looks in lib/ even where CMAKE_INSTALL_LIBDIR is lib64
+pkg_get_variable(SYSTEMD_USER_UNIT_DIR systemd systemduserunitdir)
+IF(NOT SYSTEMD_USER_UNIT_DIR)
+    set(SYSTEMD_USER_UNIT_DIR ${CMAKE_INSTALL_PREFIX}/lib/systemd/user)
+ENDIF()
+# ExecStart has to be absolute, so it cannot be hardcoded to a prefix
+configure_file(keyledsd.service.in keyledsd.service @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/keyledsd.service
+        DESTINATION ${SYSTEMD_USER_UNIT_DIR})

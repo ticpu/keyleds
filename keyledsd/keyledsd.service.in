@@ -1,0 +1,12 @@
+[Unit]
+Description=Keyleds LED controller for Logitech keyboards
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/keyledsd -v
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target
