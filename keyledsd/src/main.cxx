@@ -61,6 +61,7 @@ public:
     keyleds::logging::level_t   logLevel = keyleds::logging::warning::value;
     bool                        autoQuit = false;
     bool                        noDBus = false;
+    bool                        noX = false;
 
 public:
     static std::optional<Options> parse(int & argc, char * argv[])
@@ -77,11 +78,12 @@ public:
             {"single",      0, nullptr, 's' },
             {"verbose",     0, nullptr, 'v' },
             {"no-dbus",     0, nullptr, 'D' },
+            {"no-x",        0, nullptr, 'X' },
             {nullptr, 0, nullptr, 0}
         };
-        while ((opt = ::getopt_long(argc, argv, ":c:hm:qsvD", optionDescriptions, nullptr)) >= 0) {
+        while ((opt = ::getopt_long(argc, argv, ":c:hm:qsvDX", optionDescriptions, nullptr)) >= 0) {
 #else
-        while ((opt = ::getopt(argc, argv, ":c:hm:qsvD")) >= 0) {
+        while ((opt = ::getopt(argc, argv, ":c:hm:qsvDX")) >= 0) {
 #endif
             switch(opt) {
             case 'c': options.configPath = optarg; break;
@@ -90,8 +92,9 @@ public:
             case 's': options.autoQuit = true; break;
             case 'v': options.logLevel += 1; break;
             case 'D': options.noDBus = true; break;
+            case 'X': options.noX = true; break;
             case 'h':
-                std::cout <<"Usage: " <<argv[0] <<" [-c path] [-h] [-m path] [-q] [-s] [-v] [-D]\n";
+                std::cout <<"Usage: " <<argv[0] <<" [-c path] [-h] [-m path] [-q] [-s] [-v] [-D] [-X]\n";
                 return std::nullopt;
             case ':':
                 std::cerr <<argv[0] <<": option -- '" <<char(::optopt) <<"' requires an argument\n";
@@ -232,13 +235,18 @@ int main(int argc, char * argv[])
         );
         service.setAutoQuit(options->autoQuit);
 
-        try {
-            auto display = std::make_unique<tools::xlib::Display>();
-            NOTICE("connected to display ", display->name());
-            service.addDisplay(std::move(display));
-        } catch (tools::xlib::Error & err) {
-            CRITICAL("X display initialization failed: ", err.what());
-            return 2;
+        if (options->noX) {
+            NOTICE("X support disabled, window context unavailable");
+        } else {
+            try {
+                auto display = std::make_unique<tools::xlib::Display>();
+                NOTICE("connected to display ", display->name());
+                service.addDisplay(std::move(display));
+            } catch (tools::xlib::Error & err) {
+                // Not fatal: evdev still reports keys, only window context is lost
+                WARNING("X display initialization failed: ", err.what(),
+                        " - profile switching by window disabled, pass -X to silence");
+            }
         }
 
 #ifndef NO_DBUS

@@ -9,7 +9,7 @@ keyledsd \- Logitech keyboard per-key lighting service
 .IR path ]
 .RB [ \-m
 .IR path ]
-.RB [ \-hqsvD ]
+.RB [ \-hqsvDX ]
 .SH DESCRIPTION
 .B keyledsd
 service sits in the background and responds to X display events by animating
@@ -52,11 +52,18 @@ to re-increase verbosity from zero.
 .BR \-D , \--no-dbus
 Disable DBus support. The service will skip DBus entirely. If DBus support
 wasn't enabled at compile time, the option is accepted but does nothing.
+.TP
+.BR \-X , \--no-x
+Do not connect to an X display. Key events are read from evdev and profiles
+are no longer switched by focused window. Without this option a missing
+display is reported as a warning and the service starts anyway.
 .PP
 .SH ENVIRONMENT
 .TP
 .B DISPLAY
-The X display to connect to and watch for window activation events.
+The X display to connect to and watch for window activation events. Read once
+at startup; if it is unset or the display cannot be opened, the service runs
+without window context.
 .SH FILES
 .TP
 .B /usr/share/keyledsd/layouts/*.yaml
