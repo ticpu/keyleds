@@ -31,6 +31,7 @@ static bool fill_info_structure(struct udev_device * usbdev, struct udev_device 
 
     if ((str = udev_device_get_devnode(hiddev)) == NULL) { return false; }
     out->path = malloc((strlen(str) + 1) * sizeof(char));
+    if (out->path == NULL) { return false; }
     strcpy(out->path, str);
 
     if ((str = udev_device_get_sysattr_value(usbdev, "idVendor")) == NULL) {
@@ -48,6 +49,7 @@ static bool fill_info_structure(struct udev_device * usbdev, struct udev_device 
         out->serial = NULL;
     } else {
         out->serial = malloc((strlen(str) + 1) * sizeof(char));
+        if (out->serial == NULL) { goto err_fill_free_path; }
         strcpy(out->serial, str);
     }
     out->description = NULL;
@@ -125,7 +127,12 @@ bool enum_find_by_serial(const char * serial, struct dev_enum_item ** out)
         }
         keyleds_close(device);
         *out = malloc(sizeof(**out));
-        fill_info_structure(usbdev, hiddev, *out);
+        if (*out == NULL || !fill_info_structure(usbdev, hiddev, *out)) {
+            free(*out);
+            *out = NULL;
+            udev_device_unref(hiddev);
+            goto err_find_free_enumerator;
+        }
         udev_device_unref(hiddev);
         result = true;
         break;
@@ -146,6 +153,7 @@ bool enum_list_devices(struct dev_enum_item ** out, unsigned * out_nb)
     struct udev_list_entry * dev_first, * dev_current;
 
     struct dev_enum_item * items = NULL;
+    struct dev_enum_item * resized;
     unsigned items_nb = 0;
 
     bool result = false;
@@ -197,24 +205,42 @@ bool enum_list_devices(struct dev_enum_item ** out, unsigned * out_nb)
         keyleds_close(device);
 
         /* Fill info structure */
-        items = realloc(items, (items_nb + 1) * sizeof(items[0]));
-        fill_info_structure(usbdev, hiddev, &items[items_nb]);
+        resized = realloc(items, (items_nb + 1) * sizeof(items[0]));
+        if (resized == NULL) {
+            udev_device_unref(hiddev);
+            goto err_enum_free_items;
+        }
+        items = resized;
+        if (!fill_info_structure(usbdev, hiddev, &items[items_nb])) {
+            udev_device_unref(hiddev);
+            goto err_enum_free_items;
+        }
         items_nb += 1;
-
-        /* FIXME 'items'
-         * dev_enum_udev.c:200:9: error: Common realloc mistake: 'items' nulled but not freed upon failure [memleakOnRealloc]
-         *     items = realloc(items, (items_nb + 1) * sizeof(items[0]));
-         */
 
 err_enum_release_device:
         udev_device_unref(hiddev);
     }
 
-    *out = realloc(items, (items_nb + 1) * sizeof(items[0]));
-    (*out)[items_nb].path = NULL;
+    /* enum_free_list walks until a NULL path, so the list must carry a terminator */
+    resized = realloc(items, (items_nb + 1) * sizeof(items[0]));
+    if (resized == NULL) { goto err_enum_free_items; }
+    items = resized;
+    items[items_nb].path = NULL;
+
+    *out = items;
     *out_nb = items_nb;
+    items = NULL;               /* ownership handed to the caller */
     result = true;
 
+err_enum_free_items:
+    if (items != NULL) {
+        for (unsigned idx = 0; idx < items_nb; idx += 1) {
+            free(items[idx].path);
+            free(items[idx].serial);
+            free(items[idx].description);
+        }
+        free(items);
+    }
 err_enum_free_enumerator:
     udev_enumerate_unref(enumerator);
 err_enum_free_context:

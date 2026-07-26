@@ -39,6 +39,7 @@ bool enum_find_by_serial(const char * serial, struct dev_enum_item ** out)
 bool enum_list_devices(struct dev_enum_item ** out, unsigned * out_nb)
 {
     struct dev_enum_item * items = NULL;
+    struct dev_enum_item * resized;
     unsigned items_nb = 0;
 
     DIR * dir;
@@ -61,26 +62,38 @@ bool enum_list_devices(struct dev_enum_item ** out, unsigned * out_nb)
         if ((device = keyleds_open(path, KEYLEDSCTL_APP_ID)) == NULL) { continue; }
 
         if (ioctl(keyleds_device_fd(device), HIDIOCGRAWINFO, &devinfo) >= 0) {
-            items = realloc(items, (items_nb + 1) * sizeof(struct dev_enum_item));
+            resized = realloc(items, (items_nb + 1) * sizeof(struct dev_enum_item));
+            if (resized == NULL) { keyleds_close(device); goto err_free_items; }
+            items = resized;
+
             items[items_nb].path = malloc(strlen(path) + 1);
+            if (items[items_nb].path == NULL) { keyleds_close(device); goto err_free_items; }
             strcpy(items[items_nb].path, path);
             items[items_nb].vendor_id = devinfo.vendor;
             items[items_nb].product_id = devinfo.product;
             items[items_nb].serial = NULL;
-            items[items_nb].description = NULL;
+            items[items_nb].description = NULL; /*FIXME*/
             items_nb += 1;
         }
-
-        /* FIXME 'items'
-         * dev_enum_hard.c:64:13: error: Common realloc mistake: 'items' nulled but not freed upon failure [memleakOnRealloc]
-         *  items = realloc(items, (items_nb + 1) * sizeof(struct dev_enum_item));
-         */
 
         keyleds_close(device);
     }
     closedir(dir);
+    dir = NULL;
+
+    /* enum_free_list walks until a NULL path, so the list must carry a terminator */
+    resized = realloc(items, (items_nb + 1) * sizeof(struct dev_enum_item));
+    if (resized == NULL) { goto err_free_items; }
+    items = resized;
+    items[items_nb].path = NULL;
 
     *out = items;
     *out_nb = items_nb;
     return true;
+
+err_free_items:
+    for (unsigned idx = 0; idx < items_nb; idx += 1) { free(items[idx].path); }
+    free(items);
+    if (dir != NULL) { closedir(dir); }
+    return false;
 }
