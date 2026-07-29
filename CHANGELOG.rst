@@ -4,6 +4,18 @@ Release Notes
 
 Unreleased
 
+Bugfixes:
+
+- The daemon no longer aborts when a udev notification carries no device path
+  or action, and device descriptions tolerate properties that libudev reports
+  without a value. These produced undefined behaviour reachable from any
+  keyboard hotplug.
+- Errors reported on a watched file descriptor are logged and stop the daemon
+  instead of being mistaken for a readable descriptor, which previously left it
+  running against a descriptor that would never deliver another event.
+- An unexpected error inside an event handler is now logged and, where it is
+  recoverable, no longer takes the daemon down with it.
+
 
 *****************************
 1.2.0 - current release
