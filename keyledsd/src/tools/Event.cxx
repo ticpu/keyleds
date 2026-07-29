@@ -16,8 +16,12 @@
  */
 #include "keyledsd/tools/Event.h"
 
+#include "keyledsd/logging.h"
+#include <cstdlib>
 #include <memory>
 #include <uv.h>
+
+LOGGING("event");
 
 using keyleds::tools::FDWatcher;
 
@@ -44,10 +48,18 @@ FDWatcher::~FDWatcher()
     uv_close(reinterpret_cast<uv_handle_t *>(m_handle), handleCloseCallback);
 }
 
-void FDWatcher::fdNotifierCallback(uv_poll_t * handle, int, int ev)
+void FDWatcher::fdNotifierCallback(uv_poll_t * handle, int status, int ev)
 {
+    // Without this, an fd error arrives as ev == 0 and handlers run against a dead fd.
+    if (status < 0) {
+        CRITICAL("poll error on watched fd: ", uv_strerror(status));
+        std::exit(1);
+    }
+
     auto mask = 0u;
     if (ev & UV_READABLE) { mask |= Read; }
     if (ev & UV_WRITABLE) { mask |= Write; }
-    static_cast<FDWatcher *>(handle->data)->ready.emit(static_cast<events>(mask));
+    invokeAtCBoundary(l_logger, [&]{
+        static_cast<FDWatcher *>(handle->data)->ready.emit(static_cast<events>(mask));
+    });
 }
