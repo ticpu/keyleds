@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       # Taken from debian/control so this job cannot drift from the packaging;
       # gtest is extra because the package does not build the test suite
@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       # Same script as `make deb`: builds the package, then installs it on a
       # clean system and fails if anything is missing or unresolved
@@ -47,7 +47,7 @@ jobs:
         run: packaging/build-deb.sh
 
       - name: Upload packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: debian-packages
           path: dist/*.deb
@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       # Same script as `make rpm`: builds the package, then installs it on a
       # clean system and fails if anything is missing or unresolved
@@ -65,7 +65,7 @@ jobs:
         run: packaging/build-rpm.sh
 
       - name: Upload packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rpm-packages
           path: dist/*.rpm
