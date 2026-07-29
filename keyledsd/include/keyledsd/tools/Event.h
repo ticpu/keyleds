@@ -17,8 +17,12 @@
 #ifndef TOOLS_EVENT_H_4FBEBA6D
 #define TOOLS_EVENT_H_4FBEBA6D
 
+#include "keyledsd/logging.h"
+#include "keyledsd/tools/Exceptions.h"
 #include <cassert>
+#include <cstdlib>
 #include <functional>
+#include <stdexcept>
 #include <utility>
 #include <type_traits>
 
@@ -67,6 +71,33 @@ void disconnect(Callback<Args...> & event, const T *)
 {
     event.disconnect();
 }
+
+
+/****************************************************************************/
+
+#ifdef KEYLEDSD_INTERNAL
+/// Runs f at a libuv callback boundary, where an escaping exception would unwind
+/// into C frames and reach std::terminate. Takes the caller's l_logger explicitly:
+/// the logging macros bind l_logger at the expansion site, which for a template is
+/// the definition site, so passing it is what keeps the module tag meaningful.
+template <typename F>
+void invokeAtCBoundary(const keyleds::logging::Logger & logger, F && f)
+{
+    try {
+        f();
+    } catch (InvariantError & error) {
+        keyleds::logging::critical::print(logger, "handler invariant violation: ", error.what());
+        std::abort();
+    } catch (FatalError & error) {
+        keyleds::logging::critical::print(logger, "handler fatal error: ", error.what());
+        std::exit(1);
+    } catch (std::exception & error) {
+        keyleds::logging::error::print(logger, "unhandled exception in handler: ", error.what());
+    } catch (...) {
+        keyleds::logging::error::print(logger, "unhandled non-exception throw in handler");
+    }
+}
+#endif
 
 
 /****************************************************************************/

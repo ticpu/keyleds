@@ -80,9 +80,12 @@ set_source_files_properties("src/device/Logitech.cxx" PROPERTIES COMPILE_FLAGS "
 
 set(test-common_SRCS
     tests/tools/utils.cxx
+    tests/tools/Event.cxx
     tests/KeyDatabase.cxx
     tests/RenderTarget.cxx
     tests/colors.cxx
+    src/logging.cxx
+    src/tools/Event.cxx
 )
 
 ##############################################################################
@@ -171,8 +174,10 @@ IF(WITH_TESTS)
 
     add_executable(test-common ${test-common_SRCS})
     target_compile_options(test-common PRIVATE "-Wno-unevaluated-expression")
+    target_compile_definitions(test-common PRIVATE KEYLEDSD_INTERNAL)
+    target_include_directories(test-common PRIVATE include ${LIBUV_INCLUDE_DIRS})
     target_include_directories(test-common SYSTEM PRIVATE ${GTEST_INCLUDE_DIRS})
-    target_link_libraries(test-common common ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+    target_link_libraries(test-common common ${LIBUV_LIBRARIES} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
     add_test(NAME common COMMAND test-common)
 
