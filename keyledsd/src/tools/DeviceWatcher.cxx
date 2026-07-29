@@ -17,12 +17,14 @@
 #include "keyledsd/tools/DeviceWatcher.h"
 
 #include "keyledsd/logging.h"
+#include "keyledsd/tools/Event.h"
 #include <algorithm>
 #include <cassert>
 #include <cstring>
 #include <libudev.h>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <uv.h>
 
 LOGGING("device-watcher");
@@ -43,17 +45,19 @@ void keyleds::tools::device::detail::udev_deleter<udev_device>::operator()(udev_
 /****************************************************************************/
 
 Description::Description(struct udev_device * device)
-    : m_device(udev_device_ref(device)),
-      m_sysPath(udev_device_get_syspath(m_device.get()))
+    : m_device(udev_device_ref(device))
 {
     struct udev_list_entry * first, * current;
     assert(device != nullptr);
 
+    const char * syspath = udev_device_get_syspath(m_device.get());
+    if (syspath != nullptr) { m_sysPath = syspath; }
+
     first = udev_device_get_properties_list_entry(device);
     udev_list_entry_foreach(current, first) {
         std::string key(udev_list_entry_get_name(current));
-        std::string val(udev_list_entry_get_value(current));
-        m_properties.emplace_back(key, val);
+        const char * val = udev_list_entry_get_value(current);
+        m_properties.emplace_back(key, val != nullptr ? val : "");
     }
 
     first = udev_device_get_tags_list_entry(device);
@@ -206,7 +210,7 @@ void DeviceWatcher::scan()
     setupEnumerator(*enumerator);
 
     if (udev_enumerate_scan_devices(enumerator.get()) < 0) {
-        throw Error("udev device scan failed");
+        throw tools::FatalError("udev device scan failed");
     }
 
     device_list result;
@@ -254,10 +258,12 @@ void DeviceWatcher::setActive(bool active)
         }
 
         uv_timer_start(m_scan.get(), [](uv_timer_t * handle) {
-            auto * watcher = static_cast<DeviceWatcher *>(handle->data);
-            if (!watcher->m_active) { return; }
-            watcher->startMonitor();
-            watcher->scan();
+            tools::invokeAtCBoundary(l_logger, [handle]{
+                auto * watcher = static_cast<DeviceWatcher *>(handle->data);
+                if (!watcher->m_active) { return; }
+                watcher->startMonitor();
+                watcher->scan();
+            });
         }, 0, 0);
 
     } else {
@@ -299,10 +305,21 @@ void DeviceWatcher::onMonitorReady()
     }
 
     const char * syspath = udev_device_get_syspath(device.get());
+    if (syspath == nullptr) {
+        DEBUG("udev notification without syspath");
+        return;
+    }
+
+    const char * rawAction = udev_device_get_action(device.get());
+    if (rawAction == nullptr) {
+        DEBUG("udev notification without action");
+        return;
+    }
+
     auto kit = std::find_if(m_known.begin(), m_known.end(),
                             [syspath](const auto & dev) { return dev.sysPath() == syspath; });
 
-    auto action = std::string(udev_device_get_action(device.get()));
+    auto action = std::string_view(rawAction);
     if (action == "add") {
         auto description = Description(device.get());
         if (isVisible(description)) {
