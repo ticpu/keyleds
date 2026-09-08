@@ -6,15 +6,9 @@ Unreleased
 
 Bugfixes:
 
-- The daemon no longer aborts when a udev notification carries no device path
-  or action, and device descriptions tolerate properties that libudev reports
-  without a value. These produced undefined behaviour reachable from any
-  keyboard hotplug.
-- Errors reported on a watched file descriptor are logged and stop the daemon
-  instead of being mistaken for a readable descriptor, which previously left it
-  running against a descriptor that would never deliver another event.
-- An unexpected error inside an event handler is now logged and, where it is
-  recoverable, no longer takes the daemon down with it.
+- The daemon no longer aborts when a udev notification carries no device path or action, and device descriptions tolerate properties that libudev reports without a value. These produced undefined behaviour reachable from any keyboard hotplug.
+- Errors reported on a watched file descriptor are logged and stop the daemon instead of being mistaken for a readable descriptor, which previously left it running against a descriptor that would never deliver another event.
+- An unexpected error inside an event handler is now logged and, where it is recoverable, no longer takes the daemon down with it.
 
 
 *****************************
@@ -27,44 +21,25 @@ First release of the maintained fork at https://github.com/ticpu/keyleds.
 
 New features:
 
-- Wayland support. Key events are now read from the keyboard's own event
-  devices, so effects react on any session type and regardless of which window
-  has focus. Previously nothing reacted outside X11.
-- The service starts without an X display instead of exiting, which it could not
-  do before. Profile switching by focused window still needs X, so under Wayland
-  it only follows XWayland clients; ``--no-x`` skips the connection entirely.
-- The XDG autostart entry is replaced by a systemd user service, giving the
-  daemon ordering against the session and restart handling that autostart does
-  not. Enable it once with ``systemctl --user enable --now keyledsd``. Systems
-  without a systemd user instance no longer start the service automatically; the
-  desktop entry is still installed, so linking it into ``~/.config/autostart``
-  restores that.
-- The shipped udev rules now grant the active seat access to the keyboard's
-  event devices. No stock rule covers those, so without this the daemon cannot
-  read keys unless the user is in the ``input`` group.
+- Wayland support. Key events are now read from the keyboard's own event devices, so effects react on any session type and regardless of which window has focus. Previously nothing reacted outside X11.
+- The service starts without an X display instead of exiting, which it could not do before. Profile switching by focused window still needs X, so under Wayland it only follows XWayland clients; ``--no-x`` skips the connection entirely.
+- The XDG autostart entry is replaced by a systemd user service, giving the daemon ordering against the session and restart handling that autostart does not. Enable it once with ``systemctl --user enable --now keyledsd``. Systems without a systemd user instance no longer start the service automatically; the desktop entry is still installed, so linking it into ``~/.config/autostart`` restores that.
+- The shipped udev rules now grant the active seat access to the keyboard's event devices. No stock rule covers those, so without this the daemon cannot read keys unless the user is in the ``input`` group.
 
 Misc:
 
 - libevdev is a new build dependency.
-- Startup reports the configuration file that was loaded, the device that was
-  opened and the event devices being watched, so a keyboard that stays dark can
-  be diagnosed from the journal alone.
+- Startup reports the configuration file that was loaded, the device that was opened and the event devices being watched, so a keyboard that stays dark can be diagnosed from the journal alone.
 - Packages for Debian and Fedora are built and install-tested on every change.
 
 Bugfixes:
 
-- Logitech devices that are not RGB keyboards — mice, receivers, headsets — are
-  no longer reported as errors — #76.
-- The udev subsystem filter was never applied, so every device event on the
-  system was processed and input, mouse and hiddev nodes were opened as if they
-  were keyboards — #76.
-- ``--no-dbus`` was accepted and ignored, so a second instance could never be
-  started while the service was running.
-- Device enumeration wrote through a null pointer when an allocation failed, and
-  without libudev returned a device list that could not be freed.
+- Logitech devices that are not RGB keyboards — mice, receivers, headsets — are no longer reported as errors — #76.
+- The udev subsystem filter was never applied, so every device event on the system was processed and input, mouse and hiddev nodes were opened as if they were keyboards — #76.
+- ``--no-dbus`` was accepted and ignored, so a second instance could never be started while the service was running.
+- Device enumeration wrote through a null pointer when an allocation failed, and without libudev returned a device list that could not be freed.
 - Window properties are no longer read from unset X atoms.
-- Fix compilation with current compilers and CMake — #72, #73, courtesy of
-  @NicBOMB.
+- Fix compilation with current compilers and CMake — #72, #73, courtesy of @NicBOMB.
 - Fix G-keys mask and M/MR keys — #63, courtesy of @nickbclifford.
 - The test suite did not compile.
 
