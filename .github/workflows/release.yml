@@ -49,6 +49,9 @@ jobs:
           packaging/changelog-section.sh "${GITHUB_REF#refs/tags/v}" > release-notes.md
           cat release-notes.md
 
+      # Left as a draft: packaging/sign-release.sh signs the assets and
+      # publishes it. Assets of a published release cannot be replaced once
+      # release immutability is on.
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
@@ -57,6 +60,6 @@ jobs:
             keyleds-*.tar.xz
             dist/*.deb
             dist/*.rpm
-          draft: false
+          draft: true
           prerelease: false
           generate_release_notes: false
